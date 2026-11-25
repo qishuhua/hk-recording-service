@@ -1,0 +1,7 @@
+/build*/
+/.env
+/data/
+/sdk_log/
+*.mp4
+/third_party/HCNetSDK/include/
+/third_party/HCNetSDK/lib/
