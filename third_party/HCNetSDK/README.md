@@ -1,0 +1,1 @@
+Place the original Linux x86_64 HCNetSDK headers in `include/` and the complete dynamic library directory (including `HCNetSDKCom/`) in `lib/`. Run `scripts/import_sdk.sh /path/to/hk-snapshot-service` from the project root to import your existing SDK. Proprietary SDK binaries are not included in this source distribution.
