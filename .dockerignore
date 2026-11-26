@@ -1,0 +1,6 @@
+.git
+build*
+.env
+*.mp4
+data
+sdk_log

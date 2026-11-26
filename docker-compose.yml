@@ -1,0 +1,26 @@
+services:
+  hk-recording-service:
+    build: .
+    platform: linux/amd64
+    ports:
+      - "${HKMEDIA_BIND_IP:-127.0.0.1}:${HKMEDIA_HOST_PORT:-8181}:8181"
+    environment:
+      HKMEDIA_PORT: '8181'
+      HKMEDIA_MAX_CONCURRENT: '${HKMEDIA_MAX_CONCURRENT:-16}'
+      HKMEDIA_DEFAULT_TIMEOUT_MS: '${HKMEDIA_DEFAULT_TIMEOUT_MS:-120000}'
+      HKMEDIA_MAX_DURATION_SECONDS: '${HKMEDIA_MAX_DURATION_SECONDS:-7200}'
+      HKMEDIA_MAX_FILE_MIB: '${HKMEDIA_MAX_FILE_MIB:-2048}'
+      HKMEDIA_QUEUE_MIB: '${HKMEDIA_QUEUE_MIB:-32}'
+      HKMEDIA_CONNECT_TIMEOUT_MS: '${HKMEDIA_CONNECT_TIMEOUT_MS:-5000}'
+      HKMEDIA_PLAYBACK_IDLE_MS: '${HKMEDIA_PLAYBACK_IDLE_MS:-15000}'
+      HKMEDIA_EOF_QUIET_MS: '${HKMEDIA_EOF_QUIET_MS:-2000}'
+      HKMEDIA_LOG_LEVEL: '${HKMEDIA_LOG_LEVEL:-info}'
+      HKMEDIA_SDK_LOG: '${HKMEDIA_SDK_LOG:-0}'
+    volumes:
+      - logs:/data/logs
+      - temp:/data/temp
+    restart: unless-stopped
+    stop_grace_period: 150s
+volumes:
+  logs:
+  temp:

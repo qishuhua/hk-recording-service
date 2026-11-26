@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HK Recording Service</title>
+<style>
+    body {
+        font: 15px system-ui, sans-serif;
+        background: #f3f5f8;
+        color: #172336;
+        margin: 0
+    }
+
+    main {
+        max-width: 650px;
+        margin: 40px auto;
+        background: white;
+        border: 1px solid #dde3ec;
+        border-radius: 12px;
+        padding: 28px
+    }
+
+    h1 {
+        font-size: 23px
+    }
+
+    p {
+        color: #506078
+    }
+
+    form {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px
+    }
+
+    label {
+        display: grid;
+        gap: 6px;
+        font-weight: 600
+    }
+
+    input,
+    select,
+    button {
+        font: inherit;
+        padding: 10px;
+        border: 1px solid #b9c5d2;
+        border-radius: 6px;
+        min-width: 0
+    }
+
+    button {
+        background: #205a91;
+        color: white;
+        border: 0;
+        font-weight: 600;
+        cursor: pointer
+    }
+
+    button:disabled {
+        opacity: .5
+    }
+
+    .wide {
+        grid-column: 1/-1
+    }
+
+    pre {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere
+    }
+
+    small {
+        font-weight: normal;
+        color: #667
+    }
+
+    @media(max-width:580px) {
+        main {
+            margin: 10px;
+            padding: 16px
+        }
+
+        form {
+            grid-template-columns: 1fr
+        }
+    }
+</style>
+<main>
+    <h1>海康历史录像下载</h1>
+    <p>指定设备本地时间，下载原始 H.264/H.265 视频无损封装的 MP4。</p>
+    <form id="form"><label>设备地址<input name="host" required placeholder="192.168.1.64"></label><label>SDK 端口<input
+                name="port" type="number" min="1" max="65535" value="8000" required></label><label>用户名<input
+                name="username" required value="admin" autocomplete="off"></label><label>设备密码<input name="password"
+                type="password" autocomplete="off"></label><label>通道<input name="channel" type="number" min="1"
+                max="65535" value="33" required></label><label>码流<select name="stream_type">
+                <option value="0">主码流</option>
+                <option value="1">子码流</option>
+                <option value="2">三码流</option>
+            </select></label><label>开始时间<input name="start_time" type="datetime-local" step="1"
+                required></label><label>结束时间<input name="end_time" type="datetime-local" step="1"
+                required></label><label>下载超时(ms)<input name="timeout_ms" type="number" min="1000" max="14400000"
+                value="120000" required></label><button class="wide" id="go">下载 MP4</button></form>
+    <pre id="status" role="status"></pre>
+    <p><small>支持 File System Access API 的浏览器会直接流式写入文件；其他浏览器仅允许 ≤64 MiB 的演示下载。大文件请使用 curl。页面不保存设备密码。</small></p>
+</main>
+<script>
+    const form = document.querySelector('#form'), status = document.querySelector('#status'), go = document.querySelector('#go');
+    function normalize(t) { return (t.length === 16 ? t + ':00' : t).replace('T', ' ') }
+    form.addEventListener('submit', async e => { e.preventDefault(); go.disabled = true; let writer = null; try { const o = Object.fromEntries(new FormData(form)); for (const k of ['port', 'channel', 'stream_type', 'timeout_ms']) o[k] = Number(o[k]); for (const k of ['start_time', 'end_time']) o[k] = normalize(o[k]); let handle = null; if (window.showSaveFilePicker) { handle = await window.showSaveFilePicker({ suggestedName: 'recording.mp4', types: [{ description: 'MP4 video', accept: { 'video/mp4': ['.mp4'] } }] }); } status.textContent = '正在从 NVR 获取历史录像…'; const headers = { 'Content-Type': 'application/json' }; const res = await fetch('/recordings', { method: 'POST', headers, body: JSON.stringify(o) }); if (!res.ok) throw Error(await res.text()); const length = Number(res.headers.get('Content-Length')); status.textContent = '正在接收 MP4…'; if (handle) { writer = await handle.createWritable(); await res.body.pipeTo(writer); writer = null; } else { if (!length || length > 64 * 1024 * 1024) { await res.body.cancel(); throw Error('此浏览器的大文件下载请使用 curl'); } const blob = await res.blob(), url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = 'recording.mp4'; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); } status.textContent = '下载完成\n实际首帧：' + res.headers.get('X-Recording-Start-Time') + '\n实际末帧：' + res.headers.get('X-Recording-End-Time') + '\n分辨率：' + res.headers.get('X-Recording-Resolution') + '\n时长(ms)：' + res.headers.get('X-Recording-Duration-Ms'); } catch (err) { if (writer) try { await writer.abort() } catch (_) { } status.textContent = '下载失败：' + err.message; } finally { go.disabled = false; } });
+</script>
+
+</html>
